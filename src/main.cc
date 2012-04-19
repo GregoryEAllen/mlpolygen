@@ -1,0 +1,334 @@
+//=============================================================================
+//  The main program for MLPolyGen
+//----------------------------------------------------------------------------
+//  This file is part of MLPolyGen, a maximal-length polynomial generator
+//  for linear feedback shift registers.
+//  
+//  Copyright (C) 2012  Gregory E. Allen
+//  
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//  
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//=============================================================================
+
+#include <gmpxx.h>
+
+#include "MLPolyTester.h"
+
+#include <deque>
+#include <stdio.h>
+#include <iomanip>
+
+//-----------------------------------------------------------------------------
+void usage(const char* argv0)
+//-----------------------------------------------------------------------------
+{
+    printf("usage: %s [options] order\n", argv0);
+    printf(" generates/tests polynomials for maximal length (ML) for an LFSR\n");
+    printf(" mlpolygen version 1.0.0\n");
+    printf("  options:\n");
+    printf("   -b      use bignum library (GNU MP), may be auto-selected by order\n");
+    printf("   -p      use symmetric pairs (faster but unsorted output)\n");
+    printf("   -s int  start with specified polynomial (order is computed, not required)\n");
+    printf("   -n int  stop after specified number of ML polynomials\n");
+    printf("   -r      compute random ML polys (may not be unique, can use with -n)\n");
+    printf("   -t int  test the specified polynomial (order is computed, not required)\n");
+    printf("   -v      increase verbosity\n");
+    printf("   -?      this help\n");
+    printf("  arguments:\n");
+    printf("    order is the unsigned integer order of the polynomials to compute\n");
+}
+
+
+template <typename uintT>
+//-----------------------------------------------------------------------------
+int GetUintAsBinaryStr(const char str[], uintT & val, std::string& ostr)
+//  because that's what bitset wants
+//-----------------------------------------------------------------------------
+{
+    std::stringstream ss(str);
+
+    // leading 0x indicates hex, leading 0 indicates oct
+    if (ss.peek() == '0') {
+        char c;
+        ss.get(c);
+        c = ss.peek();
+        if (c == 'x' || c == 'X') {
+            ss.get(c);
+            ss.setf(std::ios::hex, std::ios::basefield);
+        } else {
+            ss.setf(std::ios::oct, std::ios::basefield);
+        }
+    }
+    
+    // get the value
+    bool extracted = !!(ss >> val);
+    if (!extracted)
+        return -1;
+    while (!ss.eof()) {
+        char c;
+        if (ss >> c)
+            return -1; // non-whitespace remained
+    }
+    
+    // now write it to ostr as a binary string 
+    uintT val2 = val;
+    std::deque<char> bdeq;
+    while (val2!=0) {
+        bdeq.push_front( (val2&uintT(1))!=0 ? '1' : '0' );
+        val2 /= 2;
+    }
+    
+    while (bdeq.size()) {
+        ostr += bdeq[0];
+        bdeq.pop_front();
+    }
+    
+    return 0;
+}
+
+template<typename poly_t, typename uintT, typename fltT>
+//-----------------------------------------------------------------------------
+int TestSinglePolynomial(const char str[], int verbosity=0)
+//-----------------------------------------------------------------------------
+{
+    std::string bstr;
+    uintT val;
+    int result = GetUintAsBinaryStr<uintT>(str,val,bstr);
+    if (result) {
+        std::cerr << "Error converting to uint: " << str << std::endl;
+        return result;
+    }
+
+    LFSRPolynomial<poly_t> poly(bstr.c_str());
+    MLPolyTester<poly_t,uintT,fltT> polyTester(poly.Order(),verbosity);
+    result = polyTester.TestPolynomial(poly);
+
+    std::cout << std::hex << std::setiosflags( std::ios::showbase );
+    std::cout << val << " is ";
+    if (result)
+        std::cout << "NOT ";
+    std::cout << "maximal length";
+    std::cout << " for order " << std::dec << poly.Order() << std::endl;
+    std::cout << std::resetiosflags(std::ios::showbase | std::ios::basefield);
+    return result;
+}
+
+template<typename poly_t, typename uintT, typename fltT>
+//-----------------------------------------------------------------------------
+int GenerateRandomPolys(unsigned long order, unsigned long numRands, int verbosity=0)
+//-----------------------------------------------------------------------------
+{
+    MLPolyTester<poly_t,uintT,fltT> polyTester(order,verbosity);
+    while (numRands) {
+        LFSRPolynomial<poly_t> poly(order);
+        poly.SetRandom();
+        if (1<=verbosity) {
+            std::cerr << "Random poly: " << poly << std::endl;
+        }
+        while (1) {
+            int result = polyTester.TestPolynomial(poly);
+            if (!result) {
+                std::cout << poly << std::endl;
+                numRands--;
+                break;
+            }
+            poly.next_candidate();
+            if (poly.end_candidate()) {
+                poly = LFSRPolynomial<poly_t>(order);
+            }
+            if (2<=verbosity) {
+                std::cerr << "Next poly: " << poly << std::endl;
+            }
+        }
+    }
+    return 0;
+}
+
+template<typename poly_t, typename uintT, typename fltT>
+//-----------------------------------------------------------------------------
+int GeneratePolySequence(unsigned long order, const char* startVal, unsigned long numPolys, bool inPairs, int verbosity=0)
+//-----------------------------------------------------------------------------
+{
+    if (1<=verbosity && !startVal && !numPolys) {
+        std::cerr << "Generating maximal length polynomials of order " << order << "," << std::endl;
+        LFSRPolynomial<poly_t> poly(order);
+        std::cerr << "  from 0x" << poly;
+        poly.SetMax();
+        std::cerr << " to 0x" << poly;
+        if (inPairs)
+            std::cerr << " (in pairs)";
+        std::cerr << std::endl;
+    }
+    LFSRPolynomial<poly_t> poly(order?order:1); // use a dummy when !order
+    if (startVal) {
+        std::string bstr;
+        uintT val;
+        int result = GetUintAsBinaryStr<uintT>(startVal,val,bstr);
+        if (result) {
+            std::cerr << "Error converting to uint: " << startVal << std::endl;
+            return result;
+        }
+        poly = LFSRPolynomial<poly_t>(bstr);
+    }
+    if (startVal && order && (poly.Order() != order)) {
+        std::cerr << "Order multiply specified as " << poly.Order() << " and " << order;
+        std::cerr << ", using " << poly.Order() << " from the start value" << std::endl;
+    }
+    order = poly.Order();
+
+    MLPolyTester<poly_t,uintT,fltT> polyTester(order,verbosity);
+    unsigned long polysFound = 0;
+    while (1) {
+        if (2<=verbosity) {
+            std::cerr << "candidate: " << poly << std::endl;
+        }
+        int result = polyTester.TestPolynomial(poly);
+        if (!result) {
+            std::cout << poly << std::endl;
+            polysFound++;
+            if (inPairs && (poly.IsAsymmetric()==-1)) { // is asymmetric and has more lower bits
+                std::cout << poly.SymmetricDual() << std::endl;
+                polysFound++;
+            }
+        }
+        poly.next_candidate();
+        while (inPairs && (poly.IsAsymmetric()==1) && !poly.end_candidate()) {
+            poly.next_candidate();
+        }
+        if (poly.end_candidate()) {
+            break;
+        }
+        if (numPolys && polysFound>=numPolys) {
+            break;
+        }
+    }
+    return 0;
+}
+
+typedef default_poly_t reg_poly_t;
+typedef uintmax_t reg_uint_t;
+typedef long double reg_float_t;
+
+typedef std::bitset<1024> big_poly_t;
+typedef mpz_class big_uint_t;
+typedef mpf_class big_float_t;
+
+
+//-----------------------------------------------------------------------------
+int main(int argc, char* const argv[])
+//-----------------------------------------------------------------------------
+{
+    int c;
+    const char* argv0 = argv[0];
+    int bignum = 0;
+    int verbosity = 0;
+    int result = 0;
+    int tested = 0;
+    bool inPairs = 0;
+    bool doRandom = 0;
+    const char* startVal = 0;
+    unsigned long numPolys = 0;
+    
+    while ((c = getopt(argc, argv, "vbprs:n:t:?")) != -1) {
+        switch (c) {
+            case 't':
+                if (!bignum) {
+                    result += TestSinglePolynomial<reg_poly_t,reg_uint_t,reg_float_t>(optarg, verbosity);
+                } else {
+                    result += TestSinglePolynomial<big_poly_t,big_uint_t,big_float_t>(optarg, verbosity);
+                }
+                tested++;
+                break;
+            case 'r':
+                doRandom = 1;
+                break;
+            case 's':
+                startVal = optarg;
+                break;
+            case 'n':
+                char* endp;
+                numPolys = strtoul(optarg,&endp,0);
+                if (endp[0]) {
+                    std::cerr << "Error converting to uint: " << optarg << std::endl;
+                    return -1;
+                }
+                break;
+            case 'b':
+                bignum = 1;
+                break;
+            case 'p':
+                inPairs = 1;
+                break;
+            case 'v':
+                verbosity++;
+                break;
+            case '?':
+                usage(argv[0]);
+                return 0;
+            default:
+                usage(argv[0]);
+                return -1;
+        }
+    }
+    argc -= optind;
+    argv += optind;
+    
+    if (argc>1) {
+        std::cerr << "Error: too many arguments" << std::endl;
+        usage(argv0);
+        return -1;
+    }
+    if (tested) {
+        if (argc) {
+            std::cerr << "Note: option -t excludes the argument order" << std::endl;
+        }
+        return result;
+    }
+    unsigned long order = 0;
+    if (argc) {
+        char* endp;
+        order = strtoul(argv[0],&endp,0);
+        if (endp[0]) {
+            std::cerr << "Error converting to uint: " << argv[0] << std::endl;
+            return -1;
+        }
+    } else if (!startVal) {
+        std::cerr << "Error: not enough arguments" << std::endl;
+        usage(argv0);
+        return -1;
+    }
+    if (order>sizeof(reg_poly_t)*8 && !bignum) {
+        std::cerr << "Maximum order (without bignum) is " << sizeof(reg_poly_t)*8;
+        std::cerr << ", setting bignum" << std::endl;
+        bignum = 1;
+    }
+    if (order>sizeof(big_poly_t)*8 && !bignum) {
+        std::cerr << "Maximum order is " << sizeof(big_poly_t)*8 << std::endl;
+        return -1;
+    }
+
+    if (doRandom) {
+        if (!numPolys) numPolys = 1;
+        if (order<=64 && !bignum) {
+            return GenerateRandomPolys<reg_poly_t,reg_uint_t,reg_float_t>(order,numPolys,verbosity);
+        } else {
+            return GenerateRandomPolys<big_poly_t,big_uint_t,big_float_t>(order,numPolys,verbosity);
+        }
+    }
+    
+    if (!bignum) {
+        return GeneratePolySequence<reg_poly_t,reg_uint_t,reg_float_t>(order,startVal,numPolys,inPairs,verbosity);
+    } else {
+        return GeneratePolySequence<big_poly_t,big_uint_t,big_float_t>(order,startVal,numPolys,inPairs,verbosity);
+    }
+}
