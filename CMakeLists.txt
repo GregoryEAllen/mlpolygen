@@ -17,8 +17,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-cmake_minimum_required(VERSION 2.4)
+cmake_minimum_required(VERSION 2.6)
 project(mlpolygen)
+
+# set the reported version for mlpolygen
+add_definitions("-DMLPOLYGEN_VERSION=\"1.0.1\"")
+
+# fetch the mercurial repo version, if possible
+execute_process(
+    COMMAND hg id -i
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    OUTPUT_VARIABLE HG_REVISION
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if (HG_REVISION)
+    add_definitions("-DHG_REVISION=\"${HG_REVISION}\"")
+endif (HG_REVISION)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 

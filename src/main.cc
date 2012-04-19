@@ -30,13 +30,16 @@
 #include <stdio.h>
 #include <iomanip>
 
+#ifndef MLPOLYGEN_VERSION
+#define MLPOLYGEN_VERSION "UNKNOWN"
+#endif
+
 //-----------------------------------------------------------------------------
 void usage(const char* argv0)
 //-----------------------------------------------------------------------------
 {
     printf("usage: %s [options] order\n", argv0);
     printf(" generates/tests polynomials for maximal length (ML) for an LFSR\n");
-    printf(" mlpolygen version 1.0.0\n");
     printf("  options:\n");
 #ifdef USING_GMP
     printf("   -b      use bignum library (GMP), may be auto-selected by order\n");
@@ -52,6 +55,12 @@ void usage(const char* argv0)
     printf("    order is the unsigned integer order of the polynomials to compute\n");
 #ifndef USING_GMP
     printf(" Compiled without bignum (GMP) support\n");
+#endif
+    printf(" mlpolygen version %s", MLPOLYGEN_VERSION);
+#ifdef HG_REVISION
+    printf(", compiled at Mercurial revision %s\n", HG_REVISION);
+#else
+    printf("\n");
 #endif
 }
 
