@@ -51,16 +51,23 @@ To follow this approach::
  $ make
  $ sudo make install
 
+Normally, MLPolyGen requires GMP_ to build so that it can support numbers larger than 64 bits.
+If GMP_ is present on your system, CMake will automatically detect and use it.
+If you would like to disable the dependency on GMP_,
+run CMake using the WITHOUT_GMP option as follows::
+
+ $ cmake -DWITHOUT_GMP=1 ..
+
 Usage examples
 --------------
 
 This section contains some examples for some common use cases.
 All of the options that are built in can shown by requesting help::
 
- $ mlpolygen -h
+ $ mlpolygen -?
 
 
-To generate all of the maximal length polynomials of a particular size (e.g. 16)::
+To generate all of the maximal length polynomials of a particular order (e.g. 16)::
 
  $ mlpolygen 16
  8016
@@ -130,8 +137,6 @@ take hours (days, weeks) to complete.
 To do
 -----
 
- - make it work in the absence of GMP
-
  - add a CLI switch to specify a stop polynomial value (so it could compute subsections in parallel)
 
  - make sure it works on multiple platforms
@@ -161,7 +166,7 @@ Acknowledgements and Background
 
    - It contained no license when I downloaded it, and I can no longer find it on the internet
 
- - mlpolygen is based on the algorithm described ``lfsr_s.c``
+ - mlpolygen is based on the algorithm described in ``lfsr_s.c``
 
  - I wrote mlpolygen while examining ``lfsr_s.c``, so portions of mlpolygen may be very loosely based on ``lfsr_s.c``
 
