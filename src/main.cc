@@ -20,7 +20,9 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //=============================================================================
 
+#ifdef USING_GMP
 #include <gmpxx.h>
+#endif
 
 #include "MLPolyTester.h"
 
@@ -36,7 +38,9 @@ void usage(const char* argv0)
     printf(" generates/tests polynomials for maximal length (ML) for an LFSR\n");
     printf(" mlpolygen version 1.0.0\n");
     printf("  options:\n");
-    printf("   -b      use bignum library (GNU MP), may be auto-selected by order\n");
+#ifdef USING_GMP
+    printf("   -b      use bignum library (GMP), may be auto-selected by order\n");
+#endif
     printf("   -p      use symmetric pairs (faster but unsorted output)\n");
     printf("   -s int  start with specified polynomial (order is computed, not required)\n");
     printf("   -n int  stop after specified number of ML polynomials\n");
@@ -46,6 +50,9 @@ void usage(const char* argv0)
     printf("   -?      this help\n");
     printf("  arguments:\n");
     printf("    order is the unsigned integer order of the polynomials to compute\n");
+#ifndef USING_GMP
+    printf(" Compiled without bignum (GMP) support\n");
+#endif
 }
 
 
@@ -219,9 +226,11 @@ typedef default_poly_t reg_poly_t;
 typedef uintmax_t reg_uint_t;
 typedef long double reg_float_t;
 
+#ifdef USING_GMP
 typedef std::bitset<1024> big_poly_t;
 typedef mpz_class big_uint_t;
 typedef mpf_class big_float_t;
+#endif
 
 
 //-----------------------------------------------------------------------------
@@ -244,8 +253,10 @@ int main(int argc, char* const argv[])
             case 't':
                 if (!bignum) {
                     result += TestSinglePolynomial<reg_poly_t,reg_uint_t,reg_float_t>(optarg, verbosity);
+#ifdef USING_GMP
                 } else {
                     result += TestSinglePolynomial<big_poly_t,big_uint_t,big_float_t>(optarg, verbosity);
+#endif
                 }
                 tested++;
                 break;
@@ -263,9 +274,11 @@ int main(int argc, char* const argv[])
                     return -1;
                 }
                 break;
+#ifdef USING_GMP
             case 'b':
                 bignum = 1;
                 break;
+#endif
             case 'p':
                 inPairs = 1;
                 break;
@@ -308,27 +321,34 @@ int main(int argc, char* const argv[])
         return -1;
     }
     if (order>sizeof(reg_poly_t)*8 && !bignum) {
-        std::cerr << "Maximum order (without bignum) is " << sizeof(reg_poly_t)*8;
+        std::cerr << "Maximum order (without bignum/GMP) is " << sizeof(reg_poly_t)*8;
+#ifdef USING_GMP
         std::cerr << ", setting bignum" << std::endl;
         bignum = 1;
     }
     if (order>sizeof(big_poly_t)*8 && !bignum) {
-        std::cerr << "Maximum order is " << sizeof(big_poly_t)*8 << std::endl;
+        std::cerr << "Maximum order is " << sizeof(big_poly_t)*8;
+#endif
+        std::cerr << std::endl;
         return -1;
     }
 
     if (doRandom) {
         if (!numPolys) numPolys = 1;
-        if (order<=64 && !bignum) {
+        if (order<=sizeof(reg_poly_t)*8 && !bignum) {
             return GenerateRandomPolys<reg_poly_t,reg_uint_t,reg_float_t>(order,numPolys,verbosity);
+#ifdef USING_GMP
         } else {
             return GenerateRandomPolys<big_poly_t,big_uint_t,big_float_t>(order,numPolys,verbosity);
+#endif
         }
     }
     
     if (!bignum) {
         return GeneratePolySequence<reg_poly_t,reg_uint_t,reg_float_t>(order,startVal,numPolys,inPairs,verbosity);
+#ifdef USING_GMP
     } else {
         return GeneratePolySequence<big_poly_t,big_uint_t,big_float_t>(order,startVal,numPolys,inPairs,verbosity);
+#endif
     }
 }

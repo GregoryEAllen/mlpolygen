@@ -20,7 +20,10 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //=============================================================================
 
+#ifdef USING_GMP
 #include <gmpxx.h>
+#endif
+
 #include "PrimeFactorizer.h"
 #include <unistd.h>
 #include <stdio.h>
@@ -32,7 +35,9 @@ void usage(const char* argv0)
 {
     printf("usage: %s [-b][-?] [num] [num] [...]\n", argv0);
     printf(" computes and prints prime factors (with orders) for a provided integer\n");
-    printf("   -b  use bignum library (GNU MP)\n");
+#ifdef USING_GMP
+    printf("   -b  use bignum library (GMP)\n");
+#endif
     printf("   -?  this help\n");
     printf(" if no numbers are provided on the command line, program is interactive\n");
 }
@@ -96,9 +101,11 @@ int main(int argc, char* const argv[])
     
     while ((c = getopt(argc, argv, "b?")) != -1) {
         switch (c) {
+#ifdef USING_GMP
             case 'b':
                 bignum = 1;
                 break;
+#endif
             case '?':
                 usage(argv[0]);
                 return 0;
@@ -112,13 +119,17 @@ int main(int argc, char* const argv[])
     
     int interactive = !argc;
     
-    if (interactive && bignum) {
-        return main_interactive<mpz_class,mpf_class>();
-    } else if (interactive) {
+    if (interactive && !bignum) {
         return main_interactive<uintmax_t,long double>();
-    } else if (bignum) {
-        return main_args<mpz_class,mpf_class>(argc,argv);
-    } else {
+#ifdef USING_GMP
+    } else if (interactive) {
+        return main_interactive<mpz_class,mpf_class>();
+#endif
+    } else if (!bignum) {
         return main_args<uintmax_t,long double>(argc,argv);
+#ifdef USING_GMP
+    } else {
+        return main_args<mpz_class,mpf_class>(argc,argv);
+#endif
     }
 }

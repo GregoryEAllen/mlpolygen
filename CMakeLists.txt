@@ -21,16 +21,28 @@ cmake_minimum_required(VERSION 2.4)
 project(mlpolygen)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
-find_package(GMP)
-find_package(GMPXX)
 
-include_directories(libs/PrimeFactorizer ${GMPXX_INCLUDE_DIR})
+if (NOT WITHOUT_GMP)
+    find_package(GMP)
+    find_package(GMPXX)
+    if (NOT GMPXX_FOUND)
+        message("## GMP dependency can be disabled with cmake option -DWITHOUT_GMP=1")
+        message(FATAL_ERROR "Could not find GMP, the GNU Multiple Precision Arithmetic Library.")
+    endif (NOT GMPXX_FOUND)
+else (NOT WITHOUT_GMP)
+    message(STATUS "GMP dependency has been disabled")
+endif (NOT WITHOUT_GMP)
 
+include_directories(libs/PrimeFactorizer)
 add_executable(mlpolygen src/main.cc src/MLPolyTester.cc)
-target_link_libraries(mlpolygen ${GMP_LIBRARIES} ${GMPXX_LIBRARIES})
-
 add_executable(PrimeFactorizer libs/PrimeFactorizer/main.cc)
-target_link_libraries(PrimeFactorizer ${GMP_LIBRARIES} ${GMPXX_LIBRARIES})
+
+if (GMPXX_FOUND)
+    include_directories(${GMPXX_INCLUDE_DIR})
+    target_link_libraries(mlpolygen ${GMP_LIBRARIES} ${GMPXX_LIBRARIES})
+    target_link_libraries(PrimeFactorizer ${GMP_LIBRARIES} ${GMPXX_LIBRARIES})
+    add_definitions( -DUSING_GMP=1 )
+endif (GMPXX_FOUND)
 
 set(CMAKE_BUILD_TYPE Release)
 
