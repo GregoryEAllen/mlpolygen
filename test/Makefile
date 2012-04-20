@@ -25,9 +25,13 @@ VALTEST_MAX ?= 20
 # len tests verify the the sequence length is correct (vs published info)
 # value tests verify that the values in the sequence are correct (vs published info)
 
-all : cleanresults pairtests lentests valtests
-	@cat results.txt
-	@grep -i FAILED results.txt || echo "All tests passed"
+all : results.txt
+	@cat $<
+
+results.txt : cleanresults pairtests lentests valtests
+	@if grep -iq FAILED $@; then \
+      echo '###' FAILURE encountered >> $@; \
+    else echo "All tests passed" >> $@; fi
 
 # make sure that shell brace expansion works, e.g. {1..20}
 SHELL=/bin/bash
@@ -96,7 +100,7 @@ files/seqlen.ref.txt :
 
 files/lentests.txt : files/seqlen.sort.txt files/seqlen.ref.sort.txt
 	comm -23 $^ > $@.tmp
-	STR="sequences lengths $(LENTEST_SIZES):"; \
+	@STR="sequences lengths $(LENTEST_SIZES):"; \
 	if [ -s $@.tmp ]; then \
       echo "$$STR FAILED" > $@; cat $@.tmp >> $@; \
     else echo "$$STR passed" >> $@; fi
