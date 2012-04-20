@@ -54,6 +54,7 @@ class LFSRPolynomial {
     
     bool operator[](int n) const { return poly[n]; }
     poly_t& set(int n, int val = 1) { return poly.set(n,val); }
+    bool operator<(const LFSRPolynomial<poly_t>& lp) const;
     
     // iterator-like for iterating over potential candidates
     const LFSRPolynomial<poly_t>& next_candidate(void);
@@ -223,6 +224,24 @@ void LFSRPolynomial<poly_t>::SetMax(void)
     for (unsigned i=0; i<numBits-1; i++) {
         poly.set(i,1);
     }
+}
+
+template<typename poly_t>
+//-----------------------------------------------------------------------------
+bool LFSRPolynomial<poly_t>::operator<(const LFSRPolynomial<poly_t>& lp) const
+//-----------------------------------------------------------------------------
+// true if this < lp
+{
+    if (numBits != lp.numBits)
+        return numBits < lp.numBits;
+    unsigned i=numBits;
+    for (; i; i--) {
+        bool A = operator[](i-1);
+        bool B = lp[i-1];
+        if (A != B)
+            return A<B;
+    }
+    return false;
 }
 
 template<typename poly_t>
