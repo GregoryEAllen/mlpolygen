@@ -29,6 +29,9 @@ all : cleanresults pairtests lentests valtests
 	@cat results.txt
 	@grep -i FAILED results.txt || echo "All tests passed"
 
+# make sure that shell brace expansion works, e.g. {1..20}
+SHELL=/bin/bash
+
 #==============================================================================
 
 PAIRTEST_SIZES = $(shell echo {1..$(PAIRTEST_MAX)})
@@ -69,13 +72,13 @@ files/pairtests.txt : $(PAIRTEST_FILES)
 LENTEST_SIZES = $(shell echo {1..$(LENTEST_MAX)})
 LENTEST_SRC = $(patsubst %, files/%.mlp.txt, $(LENTEST_SIZES))
 LENTEST_ALL = $(LENTEST_SRC)
-LENTEST_ALL += files/seqlen.txt files/seqlen.ref.txt files/lentests.txt
+LENTEST_ALL += files/lentests.txt
 
 lentests : $(LENTEST_ALL)
 	@cat files/lentests.txt >> results.txt
 
 clean_lentests :
-	@rm -f $(LENTEST_ALL)
+	@rm -f $(LENTEST_ALL) files/seqlen*.txt
 
 # put our seqlen.txt in the same (sensible) format as those published
 files/seqlen.txt : $(LENTEST_SRC)
@@ -88,7 +91,10 @@ files/seqlen.txt : $(LENTEST_SRC)
 files/seqlen.ref.txt :
 	curl http://oeis.org/A011260/b011260.txt | grep -v '#' > $@
 
-files/lentests.txt : files/seqlen.txt files/seqlen.ref.txt
+%.sort.txt : %.txt
+	sort $^ > $@
+
+files/lentests.txt : files/seqlen.sort.txt files/seqlen.ref.sort.txt
 	comm -23 $^ > $@.tmp
 	STR="sequences lengths $(LENTEST_SIZES):"; \
 	if [ -s $@.tmp ]; then \
