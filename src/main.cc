@@ -46,6 +46,7 @@ void usage(const char* argv0)
 #endif
     printf("   -p      use symmetric pairs (faster but unsorted output)\n");
     printf("   -s int  start with specified polynomial (order is computed, not required)\n");
+    printf("   -e int  end with specified polynomial (order is computed, not required)\n");
     printf("   -n int  stop after specified number of ML polynomials\n");
     printf("   -r      compute random ML polys (may not be unique, can use with -n)\n");
     printf("   -t int  test the specified polynomial (order is computed, not required)\n");
@@ -121,7 +122,8 @@ int TestSinglePolynomial(const char str[], int verbosity=0)
     uintT val;
     int result = GetUintAsBinaryStr<uintT>(str,val,bstr);
     if (result) {
-        std::cerr << "Error converting to uint: " << str << std::endl;
+        std::cerr << "Error converting to uint" << sizeof(uintT)*8;
+        std::cerr << ": " << str << std::endl;
         return result;
     }
 
@@ -172,35 +174,60 @@ int GenerateRandomPolys(unsigned long order, unsigned long numRands, int verbosi
 
 template<typename poly_t, typename uintT, typename fltT>
 //-----------------------------------------------------------------------------
-int GeneratePolySequence(unsigned long order, const char* startVal, unsigned long numPolys, bool inPairs, int verbosity=0)
+int GeneratePolySequence(unsigned long order, const char* startVal, const char* endVal, unsigned long numPolys, bool inPairs, int verbosity=0)
 //-----------------------------------------------------------------------------
 {
-    if (1<=verbosity && !startVal && !numPolys) {
-        std::cerr << "Generating maximal length polynomials of order " << order << "," << std::endl;
-        LFSRPolynomial<poly_t> poly(order);
-        std::cerr << "  from 0x" << poly;
-        poly.SetMax();
-        std::cerr << " to 0x" << poly;
-        if (inPairs)
-            std::cerr << " (in pairs)";
-        std::cerr << std::endl;
-    }
     LFSRPolynomial<poly_t> poly(order?order:1); // use a dummy when !order
     if (startVal) {
         std::string bstr;
         uintT val;
         int result = GetUintAsBinaryStr<uintT>(startVal,val,bstr);
         if (result) {
-            std::cerr << "Error converting to uint: " << startVal << std::endl;
+            std::cerr << "Error converting to uint" << sizeof(uintT)*8;
+            std::cerr << ": " << startVal << std::endl;
             return result;
         }
         poly = LFSRPolynomial<poly_t>(bstr);
     }
-    if (startVal && order && (poly.Order() != order)) {
+    LFSRPolynomial<poly_t> endPoly(1);
+    if (endVal) {
+        std::string bstr;
+        uintT val;
+        int result = GetUintAsBinaryStr<uintT>(endVal,val,bstr);
+        if (result) {
+            std::cerr << "Error converting to uint" << sizeof(uintT)*8;
+            std::cerr << ": " << endVal << std::endl;
+            return result;
+        }
+        endPoly = LFSRPolynomial<poly_t>(bstr);
+    }
+    if (startVal && endVal) {
+        if (poly.Order() != endPoly.Order()) {
+            std::cerr << "Error: order for start and end values must match (";
+            std::cerr << poly.Order() << " vs " << endPoly.Order() << ")" << std::endl;
+            return -1;
+        }
+    }
+    if (!startVal && endVal) {
+    	poly = LFSRPolynomial<poly_t>(endPoly.Order());
+    }
+    if ((startVal || endVal) && order && (poly.Order() != order)) {
         std::cerr << "Order multiply specified as " << poly.Order() << " and " << order;
         std::cerr << ", using " << poly.Order() << " from the start value" << std::endl;
     }
     order = poly.Order();
+
+    if (1<=verbosity && !numPolys) {
+        std::cerr << "Generating maximal length polynomials of order " << order << "," << std::endl;
+        LFSRPolynomial<poly_t> opoly = poly;
+        std::cerr << "  from 0x" << opoly;
+        if (endVal) opoly = endPoly;
+        else opoly.SetMax();
+        std::cerr << " to 0x" << opoly;
+        if (inPairs)
+            std::cerr << " (in pairs)";
+        std::cerr << std::endl;
+    }
 
     MLPolyTester<poly_t,uintT,fltT> polyTester(order,verbosity);
     unsigned long polysFound = 0;
@@ -221,10 +248,13 @@ int GeneratePolySequence(unsigned long order, const char* startVal, unsigned lon
         while (inPairs && (poly.IsAsymmetric()==1) && !poly.end_candidate()) {
             poly.next_candidate();
         }
-        if (poly.end_candidate()) {
+        if (poly.end_candidate()) { // have we reached the last possible candidate?
             break;
         }
-        if (numPolys && polysFound>=numPolys) {
+        if (numPolys && polysFound>=numPolys) { // have we already found enough?
+            break;
+        }
+        if (endVal && endPoly<poly) { // have we passed a spec's endVal?
             break;
         }
     }
@@ -255,9 +285,10 @@ int main(int argc, char* const argv[])
     bool inPairs = 0;
     bool doRandom = 0;
     const char* startVal = 0;
+    const char* endVal = 0;
     unsigned long numPolys = 0;
     
-    while ((c = getopt(argc, argv, "vbprs:n:t:?")) != -1) {
+    while ((c = getopt(argc, argv, "vbprs:e:n:t:?")) != -1) {
         switch (c) {
             case 't':
                 if (!bignum) {
@@ -274,6 +305,9 @@ int main(int argc, char* const argv[])
                 break;
             case 's':
                 startVal = optarg;
+                break;
+            case 'e':
+                endVal = optarg;
                 break;
             case 'n':
                 char* endp;
@@ -324,7 +358,7 @@ int main(int argc, char* const argv[])
             std::cerr << "Error converting to uint: " << argv[0] << std::endl;
             return -1;
         }
-    } else if (!startVal) {
+    } else if (!startVal && !endVal) {
         std::cerr << "Error: not enough arguments" << std::endl;
         usage(argv0);
         return -1;
@@ -343,6 +377,8 @@ int main(int argc, char* const argv[])
     }
 
     if (doRandom) {
+        if (inPairs || startVal || endVal)
+            std::cerr << "Note: option -r excludes these options: -p -s -e " << std::endl;
         if (!numPolys) numPolys = 1;
         if (order<=sizeof(reg_poly_t)*8 && !bignum) {
             return GenerateRandomPolys<reg_poly_t,reg_uint_t,reg_float_t>(order,numPolys,verbosity);
@@ -354,10 +390,10 @@ int main(int argc, char* const argv[])
     }
     
     if (!bignum) {
-        return GeneratePolySequence<reg_poly_t,reg_uint_t,reg_float_t>(order,startVal,numPolys,inPairs,verbosity);
+        return GeneratePolySequence<reg_poly_t,reg_uint_t,reg_float_t>(order,startVal,endVal,numPolys,inPairs,verbosity);
 #ifdef USING_GMP
     } else {
-        return GeneratePolySequence<big_poly_t,big_uint_t,big_float_t>(order,startVal,numPolys,inPairs,verbosity);
+        return GeneratePolySequence<big_poly_t,big_uint_t,big_float_t>(order,startVal,endVal,numPolys,inPairs,verbosity);
 #endif
     }
 }
