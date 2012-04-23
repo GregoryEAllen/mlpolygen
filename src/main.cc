@@ -232,6 +232,18 @@ int GeneratePolySequence(unsigned long order, const char* startVal, const char* 
     MLPolyTester<poly_t,uintT,fltT> polyTester(order,verbosity);
     unsigned long polysFound = 0;
     while (1) {
+        while (inPairs && (poly.IsAsymmetric()==1) && !poly.end_candidate()) {
+            poly.next_candidate();
+        }
+        if (poly.end_candidate()) { // have we reached the last possible candidate?
+            break;
+        }
+        if (numPolys && polysFound>=numPolys) { // have we already found enough?
+            break;
+        }
+        if (endVal && endPoly<poly) { // have we passed a spec's endVal?
+            break;
+        }
         if (2<=verbosity) {
             std::cerr << "candidate: " << poly << std::endl;
         }
@@ -245,18 +257,6 @@ int GeneratePolySequence(unsigned long order, const char* startVal, const char* 
             }
         }
         poly.next_candidate();
-        while (inPairs && (poly.IsAsymmetric()==1) && !poly.end_candidate()) {
-            poly.next_candidate();
-        }
-        if (poly.end_candidate()) { // have we reached the last possible candidate?
-            break;
-        }
-        if (numPolys && polysFound>=numPolys) { // have we already found enough?
-            break;
-        }
-        if (endVal && endPoly<poly) { // have we passed a spec's endVal?
-            break;
-        }
     }
     return 0;
 }
