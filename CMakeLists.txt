@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 2.6)
 project(mlpolygen)
 
 # set the reported version for mlpolygen
-add_definitions("-DMLPOLYGEN_VERSION=\"1.0.1\"")
+add_definitions("-DMLPOLYGEN_VERSION=\"1.0.2\"")
 
 # fetch the mercurial repo version, if possible
 execute_process(
