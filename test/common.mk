@@ -50,13 +50,13 @@ clean: $(TEST_MKFS)
 	rm -rf files lengths*.txt
 
 gzcheck: # check that all .gz files are valid
-	find files -name mlpoly\*.txt.gz -print0 | xargs -0 gzcat -t
+	find files -name mlpoly\*.txt.gz -print0 | xargs -0 gunzip -t
 
 # everything below here is to verify the sequence lengths and generate results.txt
 files/lengths.raw.txt : $(TEST_FILES)
 	@echo making $@
 	@printf '' > $@
-	@for f in $^; do gzcat $$f | wc -l >> $@; done
+	@for f in $^; do gunzip -c $$f | wc -l >> $@; done
 
 files/lengths.txt : files/lengths.raw.txt
 	@echo making $@
@@ -66,6 +66,7 @@ files/lengths.txt : files/lengths.raw.txt
 b011260.txt : 
 	curl http://oeis.org/A011260/b011260.txt -o $@
 files/lengths.ref.txt : b011260.txt
+	mkdir -p files
 	cp $< $@
 
 comm23_unsorted = comm -23 $(foreach f,$(1),<(sort $(f)))

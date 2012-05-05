@@ -50,7 +50,7 @@ def PrintSortRules(olist,ilist):
 		print '%s:' % olist[x],
 		subList = ilist[ x*entriesPerRule : x*entriesPerRule+entriesPerRule ]
 		print ' '.join(subList)
-		print '\tgzcat $^ | sort | gzip > $@'
+		print '\tgunzip -c $^ | sort | gzip > $@'
 
 def PrintLeafRules(order, olist):
 	numSegments = len(olist)
