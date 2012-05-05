@@ -47,13 +47,10 @@ test: results.txt $(TEST_FILES)
 
 clean: $(TEST_MKFS)
 	for file in $^; do $(MAKE) -f $$file clean-files; done
-	rm files lengths*.txt
+	rm -rf files lengths*.txt
 
 gzcheck: # check that all .gz files are valid
 	find files -name mlpoly\*.txt.gz -print0 | xargs -0 gzcat -t
-
-# a helpful function
-sort_gzipped = sort $(foreach f,$(1),<(gzcat $(f)))
 
 # everything below here is to verify the sequence lengths and generate results.txt
 files/lengths.raw.txt : $(TEST_FILES)
@@ -68,7 +65,7 @@ files/lengths.txt : files/lengths.raw.txt
 # get some published answers for the sequence lengths
 files/lengths.ref.txt :
 	@echo downloading $@
-	@curl http://oeis.org/A011260/b011260.txt | grep -v '#' > $@
+	@curl http://oeis.org/A011260/b011260.txt -o $@
 
 comm23_unsorted = comm -23 $(foreach f,$(1),<(sort $(f)))
 
