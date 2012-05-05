@@ -1,6 +1,11 @@
 The files CMakeModules/FindGMP.cmake and CMakeModules/FindGMPXX.cmake were
 copied verbatim from a different project and contain their own license.
-All other files are released according to the following license.
+
+The file tests/b011260.txt is publicly availble at the URL
+http://oeis.org/A011260/b011260.txt
+and does not mention any licence.
+
+All other files are released according to the following GPLv3 license.
 
 ---
                     GNU GENERAL PUBLIC LICENSE

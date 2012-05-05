@@ -63,9 +63,10 @@ files/lengths.txt : files/lengths.raw.txt
 	@order=1; while read line; do echo $$order $$line; order=$$((order+1)); done < $< > $@
 
 # get some published answers for the sequence lengths
-files/lengths.ref.txt :
-	@echo downloading $@
-	@curl http://oeis.org/A011260/b011260.txt -o $@
+b011260.txt : 
+	curl http://oeis.org/A011260/b011260.txt -o $@
+files/lengths.ref.txt : b011260.txt
+	cp $< $@
 
 comm23_unsorted = comm -23 $(foreach f,$(1),<(sort $(f)))
 
