@@ -51,6 +51,7 @@ endif (NOT WITHOUT_GMP)
 include_directories(libs/PrimeFactorizer)
 add_executable(mlpolygen src/main.cc src/MLPolyTester.cc)
 add_executable(PrimeFactorizer libs/PrimeFactorizer/main.cc)
+add_executable(lfsr_s src/lfsr_s.c)
 
 if (GMPXX_FOUND)
     include_directories(${GMPXX_INCLUDE_DIR})

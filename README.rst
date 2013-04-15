@@ -166,6 +166,8 @@ Acknowledgements and Background
 
    - It contained no license when I downloaded it, and I can no longer find it on the internet
 
+   - I've included an unmodified copy of ``lfsr_s.c`` in ``mlpolygen/src``
+
  - mlpolygen is based on the algorithm described in ``lfsr_s.c``
 
  - I wrote mlpolygen while examining ``lfsr_s.c``, so portions of mlpolygen may be very loosely based on ``lfsr_s.c``
