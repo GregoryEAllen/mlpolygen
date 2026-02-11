@@ -28,6 +28,7 @@
 
 #include <deque>
 #include <stdio.h>
+#include <getopt.h>
 #include <iomanip>
 
 #ifndef MLPOLYGEN_VERSION
