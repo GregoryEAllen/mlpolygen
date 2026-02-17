@@ -17,6 +17,8 @@
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+*While my bitbucket projects were offline, a kind soul revived `mlpolygen`
+from archive.org and now maintains his own fork at https://github.com/hayguen/mlpolygen/*
 
 ===============================================
 mlpolygen - Maximal Length polynomial generator
