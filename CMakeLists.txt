@@ -55,7 +55,7 @@ add_executable(lfsr_s src/lfsr_s.c)
 target_link_libraries(lfsr_s m)
 
 if (GMPXX_FOUND)
-    include_directories(${GMPXX_INCLUDE_DIR})
+    include_directories(SYSTEM ${GMPXX_INCLUDE_DIR})
     target_link_libraries(mlpolygen ${GMP_LIBRARIES} ${GMPXX_LIBRARIES} m)
     target_link_libraries(PrimeFactorizer ${GMP_LIBRARIES} ${GMPXX_LIBRARIES} m)
     add_definitions( -DUSING_GMP=1 )
