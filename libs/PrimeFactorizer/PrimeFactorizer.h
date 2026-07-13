@@ -156,8 +156,9 @@ template <typename uintT, typename fltT>
 uintT PrimeFactorizer<uintT,fltT>::SquareRoot(const uintT& v)
 //-----------------------------------------------------------------------------
 {
+    using std::sqrt;
     fltT vv = v;
-    vv = std::sqrt(vv);
+    vv = sqrt(vv);
     return uintT(vv);
 }
 
